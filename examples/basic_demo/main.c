@@ -6,7 +6,7 @@
 /*   By: lsarraci <lsarraci@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/12/23 15:58:10 by lsarraci          #+#    #+#             */
-/*   Updated: 2025/12/23 16:09:46 by lsarraci         ###   ########.fr       */
+/*   Updated: 2026/01/02 19:42:20 by lsarraci         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -102,7 +102,7 @@ int	main(void)
 			running = 0;
 		}
 		else
-			usleep(16666);
+			usleep(16666); /* ~60 FPS */
 	}
 	mqt_backend_destroy(ctx);
 	printf("[Demo] Finalizado!\n");

@@ -52,6 +52,7 @@ typedef struct s_platform_info
 	int					has_wayland;
 	int					has_display;
 	int					is_headless;
+	int					is_ssh_session;
 }	t_platform_info;
 
 /* Funções de Detecção */

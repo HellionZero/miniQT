@@ -32,8 +32,12 @@ t_backend_context	*mqt_create_auto_backend(int width, int height,
 	if (!mqt_backend_available(backend))
 		backend = MQT_BACKEND_TERMINAL;
 	printf("[MiniQT] Platform: %s\n", platform.os_name);
+	if (platform.is_ssh_session)
+		printf("[MiniQT] SSH session detected\n");
 	printf("[MiniQT] Display available: %s\n", platform.has_display
 		? "yes" : "no");
+	if (platform.has_x11)
+		printf("[MiniQT] X11 forwarding: active\n");
 	printf("[MiniQT] Using backend: %s\n", mqt_backend_name(backend));
 	ctx = mqt_backend_create(backend, width, height, title);
 	if (!ctx)

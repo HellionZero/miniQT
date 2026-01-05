@@ -19,9 +19,18 @@ static int	check_display_available(void)
 {
 	char	*display;
 	char	*wayland_display;
+	char	*ssh_connection;
 
 	display = getenv("DISPLAY");
 	wayland_display = getenv("WAYLAND_DISPLAY");
+	ssh_connection = getenv("SSH_CONNECTION");
+	
+	/* Verifica se está em sessão SSH com X11 forwarding */
+	if (ssh_connection && display)
+	{
+		/* SSH com X11 forwarding ativo */
+		return (1);
+	}
 	if (display || wayland_display)
 		return (1);
 	return (0);
@@ -30,8 +39,14 @@ static int	check_display_available(void)
 static int	check_x11_available(void)
 {
 	char	*display;
+	char	*ssh_tty;
 
 	display = getenv("DISPLAY");
+	ssh_tty = getenv("SSH_TTY");
+	
+	/* Prioriza X11 forwarding em sessões SSH */
+	if (ssh_tty && display && *display)
+		return (1);
 	if (display && *display)
 		return (1);
 	return (0);
@@ -52,6 +67,7 @@ t_platform_info	mqt_detect_platform(void)
 	t_platform_info	info;
 
 	info.os_name = MQT_PLATFORM_NAME;
+	info.is_ssh_session = (getenv("SSH_CONNECTION") != NULL);
 	info.has_x11 = check_x11_available();
 	info.has_wayland = check_wayland_available();
 	info.has_display = check_display_available();

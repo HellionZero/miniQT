@@ -13,6 +13,7 @@
 #include "backend.h"
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 /* Declarações de backends específicos */
 extern const t_backend_ops	g_terminal_backend_ops;
@@ -49,16 +50,21 @@ t_backend_context	*mqt_backend_create(t_graphics_backend backend_type,
 	ctx->is_running = 1;
 	if (!ctx->ops)
 	{
+		fprintf(stderr, "[Backend Error] No ops for backend type %d\n", backend_type);
 		free(ctx->title);
 		free(ctx);
 		return (NULL);
 	}
+	printf("[Backend] Calling init function for backend...\n");
+	fflush(stdout);
 	if (ctx->ops->init && ctx->ops->init(ctx, width, height, title) != 0)
 	{
+		fprintf(stderr, "[Backend Error] init function failed\n");
 		free(ctx->title);
 		free(ctx);
 		return (NULL);
 	}
+	printf("[Backend] Init successful!\n");
 	return (ctx);
 }
 

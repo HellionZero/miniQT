@@ -5,13 +5,14 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: lsarraci <lsarraci@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/12/23 00:00:00 by lsarraci          #+#    #+#             */
-/*   Updated: 2025/12/23 16:10:37 by lsarraci         ###   ########.fr       */
+/*   Created: 2026/01/02 19:33:20 by lsarraci          #+#    #+#             */
+/*   Updated: 2026/01/02 19:51:56 by lsarraci         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "backend.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 #ifdef MQT_USE_SDL2
 # include <SDL2/SDL.h>
@@ -28,19 +29,65 @@ static int	sdl2_init(t_backend_context *ctx, int width, int height,
 		const char *title)
 {
 	t_sdl2_data	*data;
+	Uint32		window_flags;
 
+	/* DEBUG: Primeiro print para confirmar entrada na função */
+	fprintf(stderr, "\n=== ENTERED sdl2_init function ===\n");
+	fprintf(stderr, "Width: %d, Height: %d, Title: %s\n", width, height, title);
+	fflush(stderr);
+
+	/* ===== CONFIGURAÇÃO FORÇADA PARA X11 ===== */
+	fprintf(stderr, "[SDL2] Setting up X11 backend configuration...\n");
+	fflush(stderr);
+	
+	/* Variáveis de ambiente para forçar X11 (deve ser antes de SDL_Init) */
+	SDL_setenv("SDL_VIDEODRIVER", "x11", 1);
+	SDL_setenv("SDL_VIDEO_ALLOW_SCREENSAVER", "1", 1);
+	
+	/* Hints do SDL para compatibilidade */
+	SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0");
+	SDL_SetHint(SDL_HINT_VIDEO_ALLOW_SCREENSAVER, "1");
+	SDL_SetHint(SDL_HINT_FRAMEBUFFER_ACCELERATION, "1");
+	SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+	
+	printf("[SDL2] Initializing SDL with X11 backend (forced)...\n");
+	fflush(stdout);
+	
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
+	{
+		fprintf(stderr, "[SDL2 Error] SDL_Init failed: %s\n", SDL_GetError());
 		return (-1);
+	}
+	
+	printf("[SDL2] SDL_Init successful\n");
+	fflush(stdout);
+	
+	/* Verifica se realmente está usando X11 */
+	const char *driver = SDL_GetCurrentVideoDriver();
+	if (driver)
+		printf("[SDL2] Video driver: %s\n", driver);
+	else
+		printf("[SDL2] Warning: Could not detect video driver\n");
+	
 	data = malloc(sizeof(t_sdl2_data));
 	if (!data)
 	{
+		fprintf(stderr, "[SDL2 Error] Memory allocation failed\n");
 		SDL_Quit();
 		return (-1);
 	}
+	
+	printf("[SDL2] Creating window %dx%d...\n", width, height);
+	fflush(stdout);
+	
+	/* Flags para melhor compatibilidade com window managers */
+	window_flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+	
 	data->window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED,
-			SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
+			SDL_WINDOWPOS_CENTERED, width, height, window_flags);
 	if (!data->window)
 	{
+		fprintf(stderr, "[SDL2 Error] SDL_CreateWindow failed: %s\n", SDL_GetError());
 		free(data);
 		SDL_Quit();
 		return (-1);
@@ -54,12 +101,31 @@ static int	sdl2_init(t_backend_context *ctx, int width, int height,
 				SDL_RENDERER_SOFTWARE);
 		if (!data->renderer)
 		{
+			fprintf(stderr, "[SDL2 Error] SDL_CreateRenderer failed: %s\n", SDL_GetError());
 			SDL_DestroyWindow(data->window);
 			free(data);
 			SDL_Quit();
 			return (-1);
 		}
+		else
+			fprintf(stderr, "[SDL2 Warning] Using software renderer\n");
 	}
+	printf("[SDL2] Window created successfully (%dx%d)\n", width, height);
+	printf("[SDL2] Renderer created successfully\n");
+	
+	/* Garantir que a janela está visível */
+	SDL_ShowWindow(data->window);
+	SDL_RaiseWindow(data->window);
+	SDL_UpdateWindowSurface(data->window);
+	
+	/* Limpa a tela inicial */
+	SDL_SetRenderDrawColor(data->renderer, 0, 0, 0, 255);
+	SDL_RenderClear(data->renderer);
+	SDL_RenderPresent(data->renderer);
+	
+	printf("[SDL2] Window should be visible now!\n");
+	fflush(stdout);
+	
 	ctx->backend_data = data;
 	return (0);
 }
@@ -149,6 +215,18 @@ static int	sdl2_poll_event(t_backend_context *ctx, t_event *event)
 	t_sdl2_data	*data;
 
 	data = (t_sdl2_data *)ctx->backend_data;
+	
+	/* Força flush da janela para garantir que está visível */
+	static int first_poll = 1;
+	if (first_poll)
+	{
+		SDL_PumpEvents(); /* Processa eventos pendentes */
+		SDL_RaiseWindow(data->window); /* Traz janela para frente */
+		first_poll = 0;
+		printf("[SDL2] First event poll - window should be visible now\n");
+		fflush(stdout);
+	}
+	
 	if (SDL_PollEvent(&data->event))
 	{
 		if (data->event.type == SDL_QUIT)
